@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -153,7 +154,7 @@ type RPCClient interface {
 type RPCRequest struct {
 	Method  string      `json:"method"`
 	Params  interface{} `json:"params,omitempty"`
-	ID      int         `json:"id"`
+	ID      string      `json:"id"`
 	JSONRPC string      `json:"jsonrpc"`
 }
 
@@ -185,7 +186,7 @@ type RPCResponse struct {
 	JSONRPC string      `json:"jsonrpc"`
 	Result  interface{} `json:"result,omitempty"`
 	Error   *RPCError   `json:"error,omitempty"`
-	ID      int         `json:"id"`
+	ID      string      `json:"id"`
 }
 
 // RPCError represents a JSON-RPC error object if an RPC error occurred.
@@ -245,8 +246,8 @@ type RPCClientOpts struct {
 type RPCResponses []*RPCResponse
 
 // AsMap returns the responses as map with response id as key.
-func (res RPCResponses) AsMap() map[int]*RPCResponse {
-	resMap := make(map[int]*RPCResponse, 0)
+func (res RPCResponses) AsMap() map[string]*RPCResponse {
+	resMap := make(map[string]*RPCResponse, 0)
 	for _, r := range res {
 		resMap[r.ID] = r
 	}
@@ -255,7 +256,7 @@ func (res RPCResponses) AsMap() map[int]*RPCResponse {
 }
 
 // GetByID returns the response object of the given id, nil if it does not exist.
-func (res RPCResponses) GetByID(id int) *RPCResponse {
+func (res RPCResponses) GetByID(id string) *RPCResponse {
 	for _, r := range res {
 		if r.ID == id {
 			return r
@@ -321,6 +322,7 @@ func (client *rpcClient) Call(method string, params ...interface{}) (*RPCRespons
 		Method:  method,
 		Params:  Params(params...),
 		JSONRPC: jsonrpcVersion,
+		ID:      uuid.NewV4().String(),
 	}
 
 	return client.doCall(request)
@@ -349,8 +351,8 @@ func (client *rpcClient) CallBatch(requests RPCRequests) (RPCResponses, error) {
 		return nil, errors.New("empty request list")
 	}
 
-	for i, req := range requests {
-		req.ID = i
+	for _, req := range requests {
+		req.ID = uuid.NewV4().String()
 		req.JSONRPC = jsonrpcVersion
 	}
 
