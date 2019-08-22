@@ -168,6 +168,7 @@ func NewRequest(method string, params ...interface{}) *RPCRequest {
 		Params:  Params(params...),
 		JSONRPC: jsonrpcVersion,
 		Headers: http.Header{},
+		ID:      uuid.NewV4().String(),
 	}
 
 	return request
@@ -208,7 +209,7 @@ type RPCError struct {
 
 // Error function is provided to be used as error object.
 func (e *RPCError) Error() string {
-	return strconv.Itoa(e.Code) + ":" + e.Message
+	return strconv.Itoa(e.Code) + ":" + e.Message + "[" + fmt.Sprint(e.Data) + "]"
 }
 
 // HTTPError represents a error that occurred on HTTP level.
