@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
-	"github.com/satori/go.uuid"
 )
 
 const (
@@ -156,16 +155,18 @@ type RPCRequest struct {
 	Params  interface{} `json:"params,omitempty"`
 	ID      string      `json:"id"`
 	JSONRPC string      `json:"jsonrpc"`
+	Headers http.Header `json:"-"`
 }
 
 // NewRequest returns a new RPCRequest that can be created using the same convenient parameter syntax as Call()
 //
 // e.g. NewRequest("myMethod", "Alex", 35, true)
-func NewRequest(method string, params ...interface{}) *RPCRequest {
+func NewRequest(method string, headers http.Header, params ...interface{}) *RPCRequest {
 	request := &RPCRequest{
 		Method:  method,
 		Params:  Params(params...),
 		JSONRPC: jsonrpcVersion,
+		Headers: headers,
 	}
 
 	return request
@@ -228,7 +229,7 @@ func (e *HTTPError) Error() string {
 type rpcClient struct {
 	endpoint      string
 	httpClient    *http.Client
-	customHeaders map[string]string
+	customHeaders http.Header
 }
 
 // RPCClientOpts can be provided to NewClientWithOpts() to change configuration of RPCClient.
@@ -238,7 +239,7 @@ type rpcClient struct {
 // CustomHeaders: provide custom headers, e.g. to set BasicAuth
 type RPCClientOpts struct {
 	HTTPClient    *http.Client
-	CustomHeaders map[string]string
+	CustomHeaders http.Header
 }
 
 // RPCResponses is of type []*RPCResponse.
@@ -296,7 +297,7 @@ func NewClientWithOpts(endpoint string, opts *RPCClientOpts) RPCClient {
 	rpcClient := &rpcClient{
 		endpoint:      endpoint,
 		httpClient:    &http.Client{},
-		customHeaders: make(map[string]string),
+		customHeaders: make(http.Header),
 	}
 
 	if opts == nil {
@@ -384,7 +385,7 @@ func (client *rpcClient) newRequest(req interface{}) (*http.Request, error) {
 
 	// set default headers first, so that even content type and accept can be overwritten
 	for k, v := range client.customHeaders {
-		request.Header.Set(k, v)
+		request.Header[k] = v
 	}
 
 	return request, nil
@@ -393,9 +394,15 @@ func (client *rpcClient) newRequest(req interface{}) (*http.Request, error) {
 func (client *rpcClient) doCall(RPCRequest *RPCRequest) (*RPCResponse, error) {
 
 	httpRequest, err := client.newRequest(RPCRequest)
+
 	if err != nil {
 		return nil, fmt.Errorf("rpc call %v() on %v: %v", RPCRequest.Method, httpRequest.URL.String(), err.Error())
 	}
+
+	for k, v := range RPCRequest.Headers {
+		httpRequest.Header[k] = v
+	}
+
 	httpResponse, err := client.httpClient.Do(httpRequest)
 	if err != nil {
 		return nil, fmt.Errorf("rpc call %v() on %v: %v", RPCRequest.Method, httpRequest.URL.String(), err.Error())
