@@ -167,6 +167,7 @@ func NewRequest(method string, params ...interface{}) *RPCRequest {
 		Method:  method,
 		Params:  Params(params...),
 		JSONRPC: jsonrpcVersion,
+		Headers: http.Header{},
 	}
 
 	return request
