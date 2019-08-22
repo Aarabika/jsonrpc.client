@@ -162,12 +162,11 @@ type RPCRequest struct {
 // NewRequest returns a new RPCRequest that can be created using the same convenient parameter syntax as Call()
 //
 // e.g. NewRequest("myMethod", "Alex", 35, true)
-func NewRequest(method string, headers http.Header, params ...interface{}) *RPCRequest {
+func NewRequest(method string, params ...interface{}) *RPCRequest {
 	request := &RPCRequest{
 		Method:  method,
 		Params:  Params(params...),
 		JSONRPC: jsonrpcVersion,
-		Headers: headers,
 	}
 
 	return request
